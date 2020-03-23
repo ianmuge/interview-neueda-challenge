@@ -34,11 +34,14 @@
     - name: "storage_size"
       prompt: "Storage Size ?"
       private: no
-      default: "80"
+      default: "100"
   vars:
     ec2_region: "eu-west-2"
     availability_zone: "{{ec2_region}}{{zone}}"
   pre_tasks:
+    - assert:
+        that:
+          - "vpc_id is defined"
     - ec2_vpc_net_info:
         vpc_ids: "{{vpc_id}}"
       register: vpc

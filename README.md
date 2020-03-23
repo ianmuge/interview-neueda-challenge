@@ -30,7 +30,8 @@ It available to open service in browser, sign in, etc.
     - https://github.com/muge13/ansible-configure-nginx-simple 
 ## Tasks
 - [x] create database
-- [ ] create VM instance and 
+- [x] create VM instance
+- [ ] configure VM for service deployment
 - [ ] deploy service
 - [ ] configure CDN with VM instance
 ## Guide
@@ -42,7 +43,11 @@ export AWS_ACCESS_KEY_ID="" &&  export AWS_SECRET_ACCESS_KEY="" && export AWS_RE
 ### Provision
 - Run the AWSRDS provisioning script
 ```
-ansible-playbook -i ./ec2.py -T 60 -f 100 --private-key=~/ikmuge.pem AWSRDS.yml -e "username={username} password={password} instance_name={instance_name} db_name={dbname}"
+ansible-playbook -i ./ec2.py -T 60 -f 100 --private-key=~/{keypair}.pem AWSRDS.yml -e "username={username} password={password} instance_name={instance_name} db_name={dbname}" -v
+```
+- Provision EC2 Instance
+```
+ansible-playbook  -u ec2-user  -i ec2.py  -T 60 -f 100 --private-key=~/{keypair}.pem AWSEC2.yml -e "vpc_id={vpc_id} zone=a ec2_Name=test ec2_role=test ec2_instance_type='t2.micro' ec2_keypair={keypair} ec2_image='{RHEL_AMI_id}' storage_size={size}"
 ```
 
 ### Deploy
