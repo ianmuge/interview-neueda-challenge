@@ -1,0 +1,18 @@
+---
+- name: create if instance doesnt exist
+  rds_instance:
+    allocated_storage: "{{size}}"
+    apply_immediately: yes
+    auto_minor_version_upgrade: yes 
+    db_instance_class: "{{instance_type}}"
+    db_instance_identifier: "{{instance_name}}"
+    db_name: "{{db_name}}"
+    engine: "{{db_engine}}"    
+    username: "{{username}}"
+    password: "{{password}}"
+    multi_az: yes
+    port: "{{def_port}}"
+    publicly_accessible: no
+    state: present
+    tags: "{{db_tags}}"
+

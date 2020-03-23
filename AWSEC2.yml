@@ -1,0 +1,60 @@
+---
+- name: ec2 Scripts
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars_prompt:
+    - name: "vpc_id"
+      prompt: "VPC id?"
+      private: no
+    - name: "zone"
+      prompt: "Availability Zone?"
+      private: no
+      default: "a"    
+    - name: "ec2_Name"
+      prompt: "Main Service (Name)?"
+      private: no
+    - name: "ec2_role"
+      prompt: "Role in the service?"
+      private: no
+    - name: "ec2_instance_type"
+      prompt: "Server Size?"
+      private: no
+      confirm: yes
+      default: "t2.micro"
+    - name: "ec2_keypair"
+      prompt: "Keypair?"
+      private: no
+      confirm: yes
+      default: "ikmuge"
+    - name: "ec2_image"
+      prompt: "AMI ?"
+      private: no
+      default: "ami-09061756a54275ff6"
+    - name: "storage_size"
+      prompt: "Storage Size ?"
+      private: no
+      default: "80"
+  vars:
+    ec2_region: "eu-west-2"
+    availability_zone: "{{ec2_region}}{{zone}}"
+  pre_tasks:
+    - ec2_vpc_net_info:
+        vpc_ids: "{{vpc_id}}"
+      register: vpc
+    - set_fact:
+        host_env: "{{ (vpc|json_query(query)) if (vpc|json_query(query)) is defined and (vpc|json_query(query))!='' else '' }}"
+      vars:
+        query: 'vpcs[0].tags.Name'
+    - debug: var=host_env
+    - ec2_vpc_subnet_info:
+        filters:
+          vpc-id: "{{vpc_id}}"
+      register: subnet_info
+    - set_fact:
+        subnet_id: "{{ subnet_info| json_query(query)|first}}"
+      vars:
+        query: "subnets[?availability_zone == '{{availability_zone}}'].id"
+    - debug: var=subnet_id
+  roles:
+    - AWSEC2

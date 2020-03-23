@@ -1,0 +1,15 @@
+---
+ec2_security_group: "default"
+ec2_instance_count: 1
+ec2_termination_protection: false
+ec2_monitoring: true
+ec2_assign_public_ip: true
+ec2name: "{{'-'+ec2_Name if (ec2_Name is defined and ec2_Name!='') else ''}}"
+ec2role: "{{'-'+ec2_role if (ec2_role is defined and ec2_role!='') else ''}}"
+
+ec2_tag:
+  Name: "{{host_env}}{{ec2name}}{{ec2role}}"
+  service: "{{ec2_Name}}"
+  env: "{{host_env}}"
+  role: "{{ec2_role}}"
+wait_for_port: 22

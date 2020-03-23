@@ -1,0 +1,41 @@
+---
+- name: rds Scripts
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_prompt:
+    - name: "username"
+      prompt: "username?"
+      private: no
+    - name: "password"
+      prompt: "password?"
+      private: yes
+    - name: "instance_name"
+      prompt: "instance_name?"
+      private: no
+      default: "test-db-instance"
+    - name: "db_name"
+      prompt: "db_name?"
+      private: no
+      default: "testdb"
+  vars:
+    db_engine: mysql
+    size: 10
+    instance_type: db.t2.small
+    def_port: 3306
+  pre_tasks:
+    - name: check if instance exists
+      rds_instance_info:
+        db_instance_identifier: "{{instance_name}}"
+      register: rds_fact
+    - name: debug existing instance
+      debug: var=rds_fact
+  roles:
+    - AWSRDS
+  post_tasks:
+    - name: check if instance exists
+      rds_instance_info:
+        db_instance_identifier: "{{instance_name}}"
+      register: rds_fact
+    - name: debug existing instance
+      debug: var=rds_fact

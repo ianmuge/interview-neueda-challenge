@@ -1,0 +1,22 @@
+---
+- name: provision a set of instances
+  ec2:
+    region: "{{ec2_region}}"
+    keypair: "{{ec2_keypair}}"
+    group: "{{ec2_security_group}}"
+    instance_type: "{{ec2_instance_type}}"
+    image: "{{ ec2_image }}"
+    wait: true
+    count: "{{ec2_instance_count}}"
+    termination_protection: "{{ec2_termination_protection}}"
+    monitoring: "{{ec2_monitoring}}"
+    vpc_subnet_id: "{{subnet_id}}"
+    assign_public_ip: "{{ec2_assign_public_ip}}"
+    instance_tags: "{{ec2_tag}}"
+    zone: "{{availability_zone}}"
+    volumes:
+      - device_name: /dev/sda1
+        volume_size: "{{storage_size}}"
+        volume_type: gp2
+        # iops: "{{(storage_size|int*3) if (storage_size|int>35 and storage_size|int<1000) else 100}}"
+        delete_on_termination: true
