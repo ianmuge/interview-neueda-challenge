@@ -1,0 +1,40 @@
+---
+- name: ec2 Scripts
+  hosts: tag_role_test
+  connection: local
+  gather_facts: true
+  vars:
+    vpc_id: ""
+    ec2_region: "eu-west-2"
+    availability_zones:
+      - "{{ec2_region}}a"
+      - "{{ec2_region}}b"
+      - "{{ec2_region}}c"
+  pre_tasks:
+    - name: get instances
+      ec2_instance_info:
+        filters:
+          "tag:role": test
+      register: ec2_inst
+    - name: get subnets
+      ec2_vpc_subnet_info:
+        filters:
+          vpc-id: "{{vpc_id}}"
+      register: subnet_info
+    - name: get sec_groups
+      ec2_group_info:
+        filters:
+          vpc-id: "{{vpc_id}}"
+      register: group_info
+
+    - name: "Get instances"
+      set_fact:
+        ec2_inst: "{{ ec2_inst | json_query('instances[*].instance_id') }}"
+    - name: "Get subnets"
+      set_fact:
+        subnet_info: "{{ subnet_info | json_query('subnets[*].id') }}"
+    - name: "Get sec_groups"
+      set_fact:
+        group_info: "{{ group_info | json_query('security_groups[*].group_id') }}"
+  roles:
+    - AWSCDN

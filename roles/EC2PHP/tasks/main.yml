@@ -1,0 +1,173 @@
+---
+- name: install remi
+  yum:
+    name: "{{ item.name}}"
+    state: "{{ item.state }}"
+  loop:
+    - {name: "http://rpms.remirepo.net/enterprise/remi-release-{{ansible_distribution_major_version}}.rpm", state: latest }
+- name: enable remi and epel
+  ini_file:
+    dest: "{{item.dest}}"
+    section: "{{item.section}}"
+    option: "{{item.option}}"
+    value: "{{item.value}}"
+  loop:
+    - {dest: "/etc/yum.repos.d/remi-php{{ (php_version|float * 10) |int }}.repo" , section: "remi-php{{ (php_version|float * 10) |int }}", option: "enabled", value: 1}
+    - {dest: /etc/yum.repos.d/remi-safe.repo , section: remi-safe, option: "enabled", value: 1}
+  when: "((php_version|float * 10)|int >71 and ansible_distribution_major_version|int > 7) or ansible_distribution_major_version|int <=7"
+- name: enable remi and epel
+  ini_file:
+    dest: "{{item.dest}}"
+    section: "{{item.section}}"
+    option: "{{item.option}}"
+    value: "{{item.value}}"
+  loop:
+    - {dest: "/etc/yum.repos.d/remi.repo" , section: "remi", option: "enabled", value: 1}
+    - {dest: /etc/yum.repos.d/remi-safe.repo , section: remi-safe, option: "enabled", value: 1}
+  when: "((php_version|float * 10)|int <=71 and ansible_distribution_major_version|int > 7)"
+- name: RHEL <=7 Block
+  block:
+    - name: install php base and additional packages
+      yum:
+        name: "{{item.name}}"
+        state: "{{item.state}}"
+      loop:
+        - {name: "php", state: latest }
+        - {name: "php-bcmath", state: latest }
+        - {name: "php-cli", state: latest }
+        - {name: "php-common", state: latest }
+        - {name: "php-gd", state: latest }
+        - {name: "php-intl", state: latest }
+        - {name: "php-pdo", state: latest }
+        - {name: "php-ldap", state: latest }
+        - {name: "php-opcache", state: latest }
+        - {name: "php-mysqlnd", state: latest }
+        - {name: "php-mcrypt", state: latest }
+        - {name: "php-xml", state: latest }
+        - {name: "php-xmlrpc", state: latest }
+        - {name: "php-pecl-zip", state: latest }
+        - {name: "php-mbstring", state: latest }
+        - {name: "php-soap", state: latest }
+        - {name: "php-pecl-memcache" ,state: latest}
+        - {name: "composer" ,state: latest}
+      notify:
+        - "restart nginx"
+    - name: install php fpm
+      yum:
+        name: "{{item.name}}"
+        state: "{{item.state}}"
+      loop:
+        - {name: "php-fpm", state: latest }
+      notify:
+        - "restart nginx"
+        - "restart fpm"
+      when: "php_fpm_enable==true"
+
+- name: update php.ini
+  ini_file:
+    path: "{{ item.path }}"
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{item.value}}"
+    backup: false
+  loop:
+    - {path: "{{php_conf_path}}", section: PHP, option: expose_php, value: Off}
+    - {path: "{{php_conf_path}}", section: PHP, option: max_execution_time, value: "{{max_execution_time}}"}
+    - {path: "{{php_conf_path}}", section: PHP, option: max_input_time, value: "{{max_input_time}}"}
+    - {path: "{{php_conf_path}}", section: PHP, option: max_input_vars, value: "{{max_input_vars}}"}
+    - {path: "{{php_conf_path}}", section: PHP, option: memory_limit, value: "{{memory_limit}}"}
+    - {path: "{{php_conf_path}}", section: PHP, option: display_errors, value: Off}
+    - {path: "{{php_conf_path}}", section: PHP, option: upload_max_filesize, value: "{{upload_max_filesize}}"}
+    - {path: "{{php_conf_path}}", section: PHP, option: allow_url_fopen, value: On}
+    - {path: "{{php_conf_path}}", section: PHP, option: allow_url_include, value: On}
+    - {path: "{{php_conf_path}}", section: MySQLi, option: mysqli.max_persistent, value: -1 }
+    - {path: "{{php_conf_path}}", section: MySQLi, option: mysqli.allow_persistent, value: On}
+    - {path: "{{php_conf_path}}", section: MySQLi, option: mysqli.max_links, value: -1}
+    - {path: "{{php_conf_path}}", section: MySQLi, option: mysqli.reconnect, value: On}
+    - {path: "{{php_conf_path}}", section: Date, option: date.timezone, value: "{{date_timezone}}"}
+  notify:
+    - "restart nginx"
+  tags:
+    - configuration
+- name: update php modules
+  ini_file:
+    path: "{{ item.path }}"
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{item.value}}"
+    backup: false
+  loop:
+    - {path: "{{php_module_conf_path}}/10-opcache.ini", section: null, option: opcache.memory_consumption, value: "{{opcache_memory_consumption}}" }
+    - {path: "{{php_module_conf_path}}/10-opcache.ini", section: null, option: opcache.max_accelerated_files, value: "{{opcache_max_accelerated_files}}"}
+    - {path: "{{php_module_conf_path}}/10-opcache.ini", section: null, option: opcache.consistency_checks, value: 0}
+    - {path: "{{php_module_conf_path}}/10-opcache.ini", section: null, option: opcache.validate_timestamps, value: 0}
+    - {path: "{{php_module_conf_path}}/10-opcache.ini", section: null, option: opcache.enable_cli, value: "{{opcache_enable_cli}}"}
+    - {path: "{{php_module_conf_path}}/10-opcache.ini", section: null, option: opcache.enable, value: "{{opcache_enable}}"}
+    - {path: "{{php_zts_module_conf_path}}/10-opcache.ini", section: null, option: opcache.memory_consumption, value: "{{opcache_memory_consumption}}" }
+    - {path: "{{php_zts_module_conf_path}}/10-opcache.ini", section: null, option: opcache.max_accelerated_files, value: "{{opcache_max_accelerated_files}}"}
+    - {path: "{{php_zts_module_conf_path}}/10-opcache.ini", section: null, option: opcache.consistency_checks, value: 0}
+    - {path: "{{php_zts_module_conf_path}}/10-opcache.ini", section: null, option: opcache.validate_timestamps, value: 0}
+    - {path: "{{php_zts_module_conf_path}}/10-opcache.ini", section: null, option: opcache.enable_cli, value: "{{opcache_enable_cli}}"}
+    - {path: "{{php_zts_module_conf_path}}/10-opcache.ini", section: null, option: opcache.enable, value: "{{opcache_enable}}"}
+  notify:
+    - "restart nginx"
+  tags:
+    - configuration
+- name: configure php-fpm
+  ini_file:
+    path: "{{ item.path }}"
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{item.value}}"
+    backup: true
+  loop:
+    - {path: "/etc/php-fpm.conf", section: global, option: emergency_restart_threshold , value: 10}
+    - {path: "/etc/php-fpm.conf", section: global, option: emergency_restart_interval  , value: "1m"}
+    - {path: "/etc/php-fpm.conf", section: global, option: process_control_timeout  , value: 10s }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: pm, value: ondemand}
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: user, value: "{{fpm_user}}"}
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: group, value: "{{fpm_group}}"}
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: listen.backlog , value: 65536 }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: pm.max_children , value: "{{((ansible_memory_mb.real.free)/300)|int}}" }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: pm.start_servers , value: "{{(ansible_processor_count*4)|int}}" }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: pm.min_spare_servers , value: "{{(ansible_processor_count*2)|int}}" }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: pm.max_spare_servers , value: "{{(ansible_processor_count*4)|int}}" }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: pm.max_requests , value: 5000 }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: pm.process_idle_timeout , value: 5s }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: slowlog , value: "/var/log/php-fpm/www-slow.log" }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: request_slowlog_timeout , value: "5s" }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: rlimit_files  , value: "131072" }
+    - {path: "/etc/php-fpm.d/www.conf", section: www, option: rlimit_core   , value: "unlimited" }
+  notify:
+    - "restart nginx"
+    - "restart fpm"
+  when: " php_fpm_enable==true"
+  tags:
+    - configuration
+- name: ioncube setup
+  block:
+    - name: install Ioncube extensions
+      copy:
+        src: "{{item.src}}"
+        dest: "{{item.dest}}"
+        owner: root
+        group: root
+        mode: "{{item.mode}}"
+        remote_src: false
+      loop:
+        - {src: "ioncube_loader_lin_{{php_version}}.so", dest: "/usr/lib64/php/modules/ioncube_loader_lin_{{php_version}}.so", mode: "0755"}
+        - {src: "ioncube_loader_lin_{{php_version}}_ts.so", dest: "/usr/lib64/php-zts/modules/ioncube_loader_lin_{{php_version}}_ts.so", mode: "0755"}
+    - name: update ioncube configuration file
+      template:
+        src: "{{item.src}}"
+        dest: "{{item.dest}}"
+        mode: "{{item.mode}}"
+        owner: root
+        group: root
+        remote_src: false
+      loop:
+        - {src: "00-ioncube_ts.ini.j2", dest: "/etc/php-zts.d/00-ioncube.ini", mode: "0755" }
+        - {src: "00-ioncube.ini.j2", dest: "/etc/php.d/00-ioncube.ini", mode: "0755" }
+      notify: "restart nginx"
+  when: "install_ioncube==true"
+

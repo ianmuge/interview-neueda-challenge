@@ -1,0 +1,21 @@
+---
+php_version: "7.2"
+php_fpm_enable: true
+php_conf_path: "/etc/php.ini"
+php_module_conf_path: "/etc/php.d"
+php_zts_module_conf_path: "/etc/php-zts.d"
+max_execution_time: 18000
+max_input_time: 600
+max_input_vars: 75000
+memory_limit: 800M
+upload_max_filesize: 50M
+#date_timezone: "Africa/Nairobi"
+date_timezone: "Europe/London"
+opcache_memory_consumption: 512M
+opcache_max_accelerated_files: 10000
+opcache_enable_cli: 1
+opcache_enable: 1
+install_ioncube: true
+
+fpm_user: ec2-user
+fpm_group: ec2-user

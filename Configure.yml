@@ -1,0 +1,12 @@
+---
+- hosts: tag_role_test
+  name: configuration play
+  user: ec2-user
+  gather_facts: true
+  become: true
+  roles:
+    - BaseConfig
+    - EC2Nginx
+  post_tasks:
+    - name: ping
+      ping:

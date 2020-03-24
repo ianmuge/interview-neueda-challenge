@@ -1,0 +1,56 @@
+user  {{ nginx_user }};
+
+error_log  {{ nginx_error_log }};
+pid        {{ nginx_pidfile }};
+
+worker_processes  {{ nginx_worker_processes }};
+worker_rlimit_nofile {{ nginx_worker_rlimit_nofile }};
+
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections  {{ nginx_worker_connections }};
+    multi_accept {{ nginx_multi_accept }};
+    # optimized to serve many clients with each thread, essential for linux -- for testing environment
+    use epoll;
+}
+
+http {
+    include       {{ nginx_mime_file_path }};
+    default_type  application/octet-stream;
+
+    client_max_body_size {{ nginx_client_max_body_size }};
+
+    log_format  main  {{ nginx_log_format|indent(23) }};
+
+    access_log  {{ nginx_access_log }};
+
+    sendfile        {{ nginx_sendfile }};
+    tcp_nopush      {{ nginx_tcp_nopush }};
+    tcp_nodelay     {{ nginx_tcp_nodelay }};
+
+    keepalive_timeout  {{ nginx_keepalive_timeout }};
+    keepalive_requests {{ nginx_keepalive_requests }};
+
+    server_tokens {{ nginx_server_tokens }};
+
+    # cache informations about FDs, frequently accessed files
+    # can boost performance, but you need to test those values
+    open_file_cache max=200000 inactive=20s;
+    open_file_cache_valid 30s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+
+    # allow the server to close connection on non responding client, this will free up memory
+    reset_timedout_connection on;
+
+    # request timed out -- default 60
+    client_body_timeout 10;
+
+    # if client stop responding, free up memory -- default 60
+    send_timeout 2;
+     fastcgi_cache_path /var/cache/nginx levels=1:2 keys_zone=microcache:10m max_size=1000m inactive=60m;
+    gzip on;
+
+    include {{ nginx_conf_path }}/*.conf;
+}

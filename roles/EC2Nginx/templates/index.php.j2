@@ -1,0 +1,27 @@
+<?php
+$indicesServer = [
+'PHP_SELF',
+'SERVER_ADDR',
+'SERVER_NAME',
+'SERVER_SOFTWARE',
+'SERVER_PROTOCOL',
+'REQUEST_METHOD',
+'REQUEST_TIME',
+'HTTP_HOST',
+'HTTP_REFERER',
+'HTTP_USER_AGENT',
+'HTTPS',
+'REMOTE_ADDR',
+'REMOTE_HOST',
+'REMOTE_PORT'] ;
+
+echo '<table cellpadding="10">' ;
+foreach ($indicesServer as $arg) {
+    if (isset($_SERVER[$arg])) {
+        echo '<tr><td>'.$arg.'</td><td>' . $_SERVER[$arg] . '</td></tr>' ;
+    }
+    else {
+        echo '<tr><td>'.$arg.'</td><td>-</td></tr>' ;
+    }
+}
+echo '</table>' ;

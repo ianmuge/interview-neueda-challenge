@@ -1,0 +1,96 @@
+---
+- name: initialize
+  block:
+    - name: change permissions and ownership
+      become: true
+      file:
+        path: "{{web_root}}"
+        owner: "{{nginx_user}}"
+        group: "{{nginx_user}}"
+        recurse: yes
+    - name: clean webroot
+      command: "rm -rf {{web_root}}/*"
+
+  when: "initialize != false"
+- name: checkout code
+  git:
+    repo: "{{git_repo}}"
+    dest: "{{web_root}}"
+    clone: yes
+    force: yes
+    recursive: no
+    update: yes
+    track_submodules: no
+    version: "{{code_env}}"
+  tags:
+    - patch
+- name: configure composer pa token
+  shell: "composer config --global --auth github-oauth.github.com {{pa_token}}"
+- name: composer install 
+  shell: 
+    cmd: "composer install"
+    chdir: "{{web_root}}"
+- name: create log locations
+  file:
+    path: "{{item.path}}"
+    mode: "{{item.mode}}"
+    group: "{{item.group}}"
+    owner: "{{item.owner}}"
+    state: directory
+    recurse: true
+  loop:
+    - {path: "{{web_root}}/var/log/",group: "{{nginx_user}}"  ,owner: "{{nginx_user}}" ,mode: "0755" }
+  tags:
+    - patch
+- name: required locations writable
+  file:
+    path: "{{item}}"
+    state: directory
+    recurse: true
+    mode: "0775"
+  loop:
+    - "{{web_root}}/var/page_cache"
+    - "{{web_root}}/var/cache"
+    - "{{web_root}}/var/generation"
+    - "{{web_root}}/var/di"
+    - "{{web_root}}/var/view_preprocessed"
+    - "{{web_root}}/pub/static"
+    - "{{web_root}}/generation"
+  tags:
+    - patch
+
+# - name: install if first install
+#   shell: "php {{web_root}}/bin/magento setup:install --base-url='{{base_url}}' \
+#   --db-host='{{db_host}}' --db-name={{db_name}} \
+#   --db-user={{db_user}} --db-password='{{db_pass}}'  --admin-firstname={{admin_first}} \
+#   --admin-lastname={{admin_last}} --admin-email='{{admin_email}}' --admin-user={{admin_user}} \
+#   --admin-password={{admin_pass}} --language=en_US --currency=USD --timezone=UTC \
+#   --backend-frontname=admin --session-save=db"
+#   when: "install != false"
+
+# - name: configure if updating
+#   shell: "php {{web_root}}/bin/magento setup:config:set --db-host='{{db_host}}' --db-name={{db_name}} \
+#   --db-user={{db_user}} --db-password='{{db_pass}}' --language=en_US --currency=USD --timezone=UTC \
+#   --use-rewrites=1 --backend-frontname=admin --session-save=db"
+#   when: "install==false"
+
+- name: clean var files
+  shell: "rm -rf  {{web_root}}/var/generation/* {{web_root}}/var/di/* {{web_root}}/var/cache/* {{web_root}}/var/page_cache/*"
+- name: setup upgrade
+  shell: "php {{web_root}}/bin/magento setup:upgrade"
+- name: setup di compile
+  shell: "php -d memory_limit=-1 {{web_root}}/bin/magento setup:di:compile"
+  ignore_errors: true
+- name: static content deploy
+  shell: "php -d memory_limit=-1 {{web_root}}/bin/magento setup:static-content:deploy -f" #-j 1 "
+  ignore_errors: true
+
+- name: production mode
+  shell: "php {{web_root}}/bin/magento deploy:mode:set production -s"
+  tags:
+    - patch
+- name: clear cache
+  shell: "php {{web_root}}/bin/magento cache:flush"
+  tags:
+    - configuration
+    - patch

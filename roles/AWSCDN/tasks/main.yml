@@ -1,0 +1,38 @@
+---
+- elb_target_group:
+    name: "{{target_group}}"
+    protocol: http
+    port: 80
+    vpc_id: "{{vpc_id}}"
+    health_check_path: /
+    successful_response_codes: "200,250-260"
+    targets:
+      - Id: "{{ec2_inst[0]}}"
+        Port: 80
+    state: present
+    # wait_timeout: 200
+    # wait: True
+    
+- elb_application_lb:
+    name: cdn-test
+    security_groups: "{{group_info}}"
+    subnets: "{{subnet_info}}"
+    listeners:
+      - Protocol: HTTP # Required. The protocol for connections from clients to the load balancer (HTTP or HTTPS) (case-sensitive).
+        Port: 80 # Required. The port on which the load balancer is listening.
+        DefaultActions:
+          - Type: forward # Required.
+            TargetGroupName: "{{target_group}}" # Required. The name of the target group
+    state: present
+  register: ec2_elbs
+- set_fact: 
+    dns_name: "{{ec2_elbs.dns_name}}"
+- debug: var=dns_name
+
+- name: CDN register
+  cloudfront_distribution:
+    state: present
+    default_origin_domain_name: "{{dns_name}}"
+    tags:
+      Name: "cdn_test"
+      Project: "Neueda project"

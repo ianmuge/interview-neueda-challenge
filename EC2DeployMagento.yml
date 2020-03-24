@@ -1,0 +1,29 @@
+---
+- name: magento deployment scripts
+  hosts: tag_role_test
+  user: ec2-user
+  gather_facts: true
+  vars:
+    initialize: no
+    install: yes
+    base_url: ""
+    db_name: testdb
+    db_host: ""
+    db_user: a_secure_user
+    db_pass: ""
+    admin_first: 
+    admin_last: 
+    admin_user: 
+    admin_email: 
+    admin_pass: ""
+    pa_token: #github personal access token
+  pre_tasks:
+
+  roles:
+    - name: EC2DeployMagento
+  post_tasks:
+    - name: check that service is responding
+      uri:
+        url: "http://localhost"
+        return_content: yes
+        status_code: 200,302

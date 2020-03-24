@@ -1,0 +1,52 @@
+---
+- name: update packages
+  yum:
+    name: "*"
+    state: latest
+- name: set selinux permissive
+  selinux:
+    policy: targeted
+    state: permissive
+- name: epel-release
+  yum:
+    name: "http://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ansible_distribution_major_version}}.noarch.rpm"
+    state: present
+  when: "ansible_distribution_major_version|int < 8"
+
+- name: install base packages
+  yum:
+    name: "{{item}}"
+    state: present
+  loop:
+    - firewalld
+    - htop
+    - nfs-utils
+    - mariadb
+    - git
+    - s3cmd
+    - zip
+    - unzip
+    - telnet
+    - sysstat
+    - tcpdump
+    - bind-utils
+  ignore_errors: true
+- name: secure block
+  block:
+    - name: secure services started
+      service:
+        name: "{{item.name}}"
+        state: "{{item.state}}"
+        enabled: "{{item.enabled}}"
+      loop:
+        - {name: firewalld ,state: started ,enabled: true}
+    - name: allow ssh port
+      firewalld:
+        port: "{{item}}"
+        permanent: true
+        zone: public
+        state: enabled
+        immediate: yes
+      loop:
+        - "{{ssh_port}}"
+  when: secure == true

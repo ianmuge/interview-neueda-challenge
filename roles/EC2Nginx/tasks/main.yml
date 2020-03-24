@@ -1,0 +1,116 @@
+---
+- name: allow  ports
+  firewalld:
+    port: "{{ item}}"
+    permanent: true
+    zone: public
+    state: enabled
+    immediate: yes
+  loop:
+    - "{{nginx_http_port}}/tcp"
+    - "{{nginx_https_port}}/tcp"
+    - "{{php_fpm_port}}/tcp"
+- name: add nginx repo
+  yum_repository:
+    name: nginx
+    description: nginx repo
+    baseurl: "http://nginx.org/packages/rhel/{{ansible_distribution_major_version}}/$basearch/"
+    gpgcheck: no
+    enabled: yes
+- name: install nginx
+  yum:
+    name: "{{item}}"
+    state: present
+  loop:
+    - nginx
+- include_role:
+    name: EC2PHP
+- name: ensure conf and webroot folder exists
+  file:
+    path: "{{item.path}}"
+    mode: "{{item.mode}}"
+    group: "{{item.group}}"
+    owner: "{{item.owner}}"
+    state: directory
+    recurse: false
+  loop:
+    - {path: "{{nginx_conf_path}}",group: root ,owner: root ,mode: "0755" }
+    - {path: "{{nginx_webroot}}",group: "{{nginx_user}}"  ,owner: "{{nginx_user}}" ,mode: "0755" }
+- name: ensure magento root folder exists
+  file:
+    path: "{{item.path}}"
+    mode: "{{item.mode}}"
+    group: "{{item.group}}"
+    owner: "{{item.owner}}"
+    state: directory
+    recurse: false
+  loop:
+    - {path: "{{nginx_webroot}}/pub",group: "{{nginx_user}}"  ,owner: "{{nginx_user}}" ,mode: "0755" }
+  when: "defaulted==true"
+- name: copy configurations
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
+    remote_src: false
+  loop:
+    - {src: "nginx.conf.j2", dest: "/etc/nginx/nginx.conf" }
+    - {src: "mime.types.j2", dest: "/etc/nginx/mime.types" }
+  notify:
+    - validate configuration
+    - restart nginx
+  tags:
+    - configuration
+- name: copy cgi configurations
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
+    remote_src: false
+  loop:
+    - {src: "{{cgi}}_params.j2", dest: "/etc/nginx/{{cgi}}_params" }
+  notify:
+    - restart nginx
+    - restart fpm
+  tags:
+    - configuration
+- name: copy deploy_env configurations
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
+    remote_src: false
+  loop:
+    - {src: "magento.conf.j2", dest: "/etc/nginx/conf.d/default.conf" }
+  notify:
+    - restart nginx
+  tags:
+    - configuration
+- name: copy default file
+  template:
+    src: "index.php.j2"
+    dest: "{{nginx_webroot}}/pub/index.php"
+    owner: "{{nginx_user}}"
+    group: "{{nginx_user}}"
+    mode: 0755
+    remote_src: false
+  when: "defaulted==true "
+- name: started
+  service:
+    name: nginx
+    enabled: yes
+    state: restarted
+- name: fpm started
+  service:
+    name: php-fpm
+    enabled: yes
+    state: restarted
+
+
+

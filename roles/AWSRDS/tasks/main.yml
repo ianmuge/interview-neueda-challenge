@@ -12,7 +12,7 @@
     password: "{{password}}"
     multi_az: yes
     port: "{{def_port}}"
-    publicly_accessible: no
+    publicly_accessible: yes
     state: present
     tags: "{{db_tags}}"
 

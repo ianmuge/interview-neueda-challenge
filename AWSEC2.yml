@@ -26,7 +26,7 @@
       prompt: "Keypair?"
       private: no
       confirm: yes
-      default: "ikmuge"
+      default: ""
     - name: "ec2_image"
       prompt: "AMI ?"
       private: no

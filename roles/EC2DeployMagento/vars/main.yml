@@ -1,0 +1,10 @@
+---
+git_repo: "https://github.com/magento/magento2.git"
+code_env: "2.3"
+web_root: "/var/www/html"
+nginx_user: ec2-user
+
+
+media_root: "{{web_root}}/pub/media"
+static_root: "{{web_root}}/pub/static"
+
